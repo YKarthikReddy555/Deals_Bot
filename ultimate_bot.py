@@ -42,21 +42,57 @@ else:
 
 image_engine = ImageEngine()
 
-# 🛡️ SAFE MODE CONFIG: Mandatory gap between posts to avoid bans
-LAST_POST_TIME = 0
-POST_COOLDOWN = 120 # 2 minutes (120 seconds)
-SAFE_LOCK = asyncio.Lock() # 🔒 EXCLUSIVE LOCK: Prevents race conditions
+# 🛡️ ELITE BURST MODE: 3 Deals / 90 Seconds Gap
+BURST_COUNT = 0
+BURST_LIMIT = 3
+GAP_SECONDS = 90
+BURST_START_TIME = 0
+SAFE_LOCK = asyncio.Lock()
+
+def is_night_time():
+    """Checks if we are in the 'Safe Sleep' window (11:30 PM - 7:00 AM IST)"""
+    from datetime import datetime
+    now_utc = datetime.utcnow()
+    # Quick IST conversion (UTC+5:30)
+    ist_hour = (now_utc.hour + 5) + (1 if now_utc.minute + 30 >= 60 else 0)
+    ist_hour %= 24
+    # Sleep between 11 PM (23) and 7 AM (7)
+    return ist_hour >= 23 or ist_hour < 7
 
 async def wait_for_safe_cooldown():
-    """Ensures at least 2 minutes gap between every single post (Strictly enforced)"""
-    global LAST_POST_TIME
+    """Ensures a burst of 3 deals followed by a mandatory 90s gap"""
+    global LAST_POST_TIME, BURST_COUNT, BURST_START_TIME
     async with SAFE_LOCK:
-        loop_time = asyncio.get_event_loop().time()
-        elapsed = loop_time - LAST_POST_TIME
-        if LAST_POST_TIME > 0 and elapsed < POST_COOLDOWN:
-            wait = POST_COOLDOWN - elapsed
-            logger.info(f"⏳ Safe Mode: Waiting {int(wait)}s to ensure 2-min gap...")
+        # 🌙 AUTOMATED NIGHT SLEEP
+        while is_night_time():
+            logger.info("🌙 Night Mode Active (11:30 PM - 7:00 AM IST). Pausing bot to avoid spam bans...")
+            await asyncio.sleep(600) # Check every 10 mins
+
+        now = asyncio.get_event_loop().time()
+        
+        # 🚀 BURST LOGIC: Reset counter if the 90s gap has already passed naturally
+        if BURST_START_TIME > 0 and (now - BURST_START_TIME) > (GAP_SECONDS + 30):
+            BURST_COUNT = 0
+
+        # Wait if we hit the limit
+        if BURST_COUNT >= BURST_LIMIT:
+            elapsed = now - BURST_START_TIME
+            if elapsed < GAP_SECONDS:
+                wait = GAP_SECONDS - elapsed
+                logger.info(f"⏳ Burst Limit ({BURST_LIMIT}) reached. Sleeping for {int(wait)}s gap...")
+                await asyncio.sleep(wait)
+            BURST_COUNT = 0
+
+        # Start new burst timer
+        if BURST_COUNT == 0:
+            BURST_START_TIME = asyncio.get_event_loop().time()
+        else:
+            # 🧬 Human Jitter within the burst
+            wait = random.uniform(3, 8)
+            logger.info(f"🧬 Burst Mode: Spacing deal #{BURST_COUNT+1} by {int(wait)}s jitter...")
             await asyncio.sleep(wait)
+
+        BURST_COUNT += 1
         LAST_POST_TIME = asyncio.get_event_loop().time()
 
 # Force UTF-8 for Windows Console
