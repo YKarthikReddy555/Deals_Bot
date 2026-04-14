@@ -42,6 +42,21 @@ else:
 
 image_engine = ImageEngine()
 
+# 🛡️ SAFE MODE CONFIG: Mandatory gap between posts to avoid bans
+LAST_POST_TIME = 0
+POST_COOLDOWN = 120 # 2 minutes (120 seconds)
+
+async def wait_for_safe_cooldown():
+    """Ensures at least 2 minutes gap between every single post"""
+    global LAST_POST_TIME
+    loop_time = asyncio.get_event_loop().time()
+    elapsed = loop_time - LAST_POST_TIME
+    if LAST_POST_TIME > 0 and elapsed < POST_COOLDOWN:
+        wait = POST_COOLDOWN - elapsed
+        logger.info(f"⏳ Safe Mode: Waiting {int(wait)}s to ensure 2-min gap...")
+        await asyncio.sleep(wait)
+    LAST_POST_TIME = asyncio.get_event_loop().time()
+
 # Force UTF-8 for Windows Console
 class SafeFormatter(logging.Formatter):
     def format(self, record):
@@ -299,8 +314,8 @@ async def process_single_message(message, scraper, target_channels):
     """Processes a single incoming message in real-time"""
     if not message.text or not is_good_deal(message.text): return
     
-    # 🕵️ Random Jitter to look human and avoid rate limits
-    await asyncio.sleep(random.uniform(0.5, 2.0))
+    # 🕵️ Safe Mode: Strict 2-minute cooldown
+    await wait_for_safe_cooldown()
     
     try:
         # 🧪 DYNAMIC CONFIG: Fetch latest settings from DB to ensure target channels are fresh
@@ -443,6 +458,8 @@ async def spider_hunt_loop():
                         uid = extract_unique_id(real)
                         if db.is_duplicate_by_id(uid): continue
                         
+                        await wait_for_safe_cooldown()
+                        
                         aff = await get_affiliate_link(deal['url'], client)
                         if not aff: continue
                         
@@ -494,6 +511,8 @@ async def manual_post_service():
             if res.data:
                 deal = res.data[0]
                 db.client.table("manual_post_queue").update({"status": "processing"}).eq("id", deal['id']).execute()
+                
+                await wait_for_safe_cooldown()
                 
                 deal_url = deal['url'].strip()
                 caption = f"🔥 **{deal['title']}**\n\n💰 Price: {deal['price']}\n\n[🛒 Buy Now]({deal_url})\n\n⚡ *Hurry! Limited stock available.*"
