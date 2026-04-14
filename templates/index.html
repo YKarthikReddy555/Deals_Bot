@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DealsBot Elite | Management Suite</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="layout">
+        <!-- SIDEBAR -->
+        <aside>
+            <div class="logo">
+                <i class="fas fa-gem"></i>
+                <span>DEALSBOT ELITE</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#" class="nav-btn active" data-tab="dashboard-tab"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="#" class="nav-btn" data-tab="explorer-tab"><i class="fas fa-magnifying-glass"></i> Deal Explorer</a></li>
+                <li><a href="#" class="nav-btn" data-tab="community-tab"><i class="fas fa-users"></i> Community CRM</a></li>
+                <li><a href="#" class="nav-btn" data-tab="categories-tab"><i class="fas fa-microchip"></i> Categories</a></li>
+                <li><a href="#" class="nav-btn" data-tab="broadcast-tab"><i class="fas fa-bullhorn"></i> Broadcast Hub</a></li>
+                <li><a href="#" class="nav-btn" data-tab="settings-tab"><i class="fas fa-sliders-h"></i> Bot Config</a></li>
+            </ul>
+            <div style="margin-top: auto; padding-top: 2rem; border-top: 1px solid var(--glass-border);">
+                <p style="font-size: 0.75rem; color: var(--text-muted);">Elite License: ACTIVE</p>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main>
+            <!-- DASHBOARD TAB -->
+            <div id="dashboard-tab" class="tab-content active">
+                <header>
+                    <h2>Operational Overview</h2>
+                    <p>Live metrics from DC-4 and Supabase production clusters.</p>
+                </header>
+
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <h4>Active Members</h4>
+                        <div class="value">{{ total_users }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Inventory Volume</h4>
+                        <div class="value">{{ total_deals }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Daily Conversion</h4>
+                        <div class="value">94.2%</div>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-bottom: 2rem;">
+                    <canvas id="growthChart" style="max-height: 250px;"></canvas>
+                </div>
+
+                <div class="grid-2nd">
+                    <div class="panel">
+                        <h3><i class="fas fa-terminal"></i> Live Log Stream</h3>
+                        <div class="console" id="log-feed">
+                            <p>> Connecting to Telegram DC...</p>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <h3>Quick Manual Post</h3>
+                        <form action="/api/post_deal" method="post" style="margin-top: 1rem;">
+                            <input type="text" name="title" placeholder="Deal Name (e.g. Sony Headphones)" required style="margin-bottom: 0.5rem;">
+                            <input type="text" name="price" placeholder="Price (e.g. ₹4,999)" required style="margin-bottom: 0.5rem;">
+                            <input type="text" name="url" placeholder="Direct Product URL" required style="margin-bottom: 0.5rem;">
+                            <input type="text" name="image_url" placeholder="Product Image URL (Optional)" style="margin-bottom: 1rem;">
+                            <button type="submit" class="btn-primary">PUBLISH TO NETWORK 🚀</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DEAL EXPLORER TAB -->
+            <div id="explorer-tab" class="tab-content">
+                <header>
+                    <h2>Deal Explorer</h2>
+                    <p>Manage every deal currently stored in your database.</p>
+                </header>
+                <div class="panel">
+                    <div class="table-container">
+                        <table id="explorer-table">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Price</th>
+                                    <th>Added At</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COMMUNITY TAB -->
+            <div id="community-tab" class="tab-content">
+                <header>
+                    <h2>Community CRM</h2>
+                    <p>Track your audience growth and referral performance.</p>
+                </header>
+                <div class="panel">
+                    <div class="table-container">
+                        <table id="community-table">
+                            <thead>
+                                <tr>
+                                    <th>User ID</th>
+                                    <th>Username</th>
+                                    <th>Referrer</th>
+                                    <th>Joined</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CATEGORIES TAB -->
+            <div id="categories-tab" class="tab-content">
+                <header>
+                    <h2>Category Intelligence</h2>
+                    <p>Activate specific niches to trigger 'Deep Hunting' across retailers.</p>
+                </header>
+                
+                <div class="stats-container" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+                    {% for cat_id, config in categories.items() %}
+                    <div class="stat-card" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">{{ config.emoji }}</div>
+                            <h4 style="margin-bottom: 0;">{{ config.name }}</h4>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">{{ config.keywords|length }} search patterns active</p>
+                        </div>
+                        <form action="/api/categories/toggle" method="post">
+                            <input type="hidden" name="category" value="{{ cat_id }}">
+                            <label class="switch">
+                                <input type="checkbox" onchange="this.form.submit()" {% if cat_id in active_categories %}checked{% endif %}>
+                                <span class="slider round"></span>
+                            </label>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="panel" style="margin-top: 2rem; border-left: 4px solid var(--accent);">
+                    <p style="color: var(--text-muted); font-size: 0.875rem;">
+                        <i class="fas fa-info-circle" style="color: var(--accent); margin-right: 0.5rem;"></i>
+                        <strong>Deep Hunting Active:</strong> When a category is toggled ON, the bot perform specialized crawls for that category every 4-8 hours to find exclusive loot before they appear in public channels.
+                    </p>
+                </div>
+            </div>
+
+            <!-- BROADCAST TAB -->
+            <div id="broadcast-tab" class="tab-content">
+                <header>
+                    <h2>Broadcast Hub</h2>
+                    <p>Direct notification system for your entire audience.</p>
+                </header>
+                <div class="panel" style="max-width: 600px;">
+                    <h3>Send New Announcement</h3>
+                    <form action="/api/broadcast/send" method="post" style="margin-top: 1.5rem;">
+                        <div class="form-group">
+                            <label>Content (supports Markdown)</label>
+                            <textarea name="message" rows="6" placeholder="Hey everyone! Exclusive midnight loot deals are live now! 🚀" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 0.75rem; color: #fff; padding: 1rem; outline: none;"></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary">START BROADCAST 📣</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- SETTINGS TAB -->
+            <div id="settings-tab" class="tab-content">
+                <header>
+                    <h2>Bot Configuration</h2>
+                    <p>Engine-level adjustments for the automated scraper.</p>
+                </header>
+                <div class="panel" style="max-width: 800px;">
+                    <form action="/settings/update" method="post">
+                        <div class="form-group">
+                            <label>Scraper Source Channels (One per line or comma separated)</label>
+                            <textarea name="channels" rows="6" placeholder="LootDealsIndia&#10;AmazonLooters&#10;ShopWithMe" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 0.75rem; color: #fff; padding: 1rem; outline: none; font-family: monospace;">{{ settings.get('source_channels', '') }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Target Channels / Groups (One per line or comma separated)</label>
+                            <textarea name="channel_id" rows="4" placeholder="@my_deals_channel&#10;@secondary_loot_group" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 0.75rem; color: #fff; padding: 1rem; outline: none; font-family: monospace;">{{ settings.get('channel_id', '') }}</textarea>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">The bot will post every deal to ALL of these targets simultaneously.</p>
+                        </div>
+                        <button type="submit" class="btn-primary">SAVE ENGINE CONFIG</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        textarea:focus { border-color: var(--accent) !important; }
+    </style>
+    <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+telethon
+fastapi
+uvicorn
+supabase
+python-dotenv
+aiohttp
+Pillow
+jinja2
+python-multipart
+requests

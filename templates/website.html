@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Tech Telugu Deals | Best Tech Loot</title>
+    <link rel="stylesheet" href="/static/website_style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="container text-center">
+            <div class="logo">Cyber Tech Telugu</div>
+            <div class="subtitle">Premium Loot & Deals</div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero text-center">
+            <h1>Exclusive Tech Loot & Daily Deals</h1>
+            <p>We hunt the internet for the biggest price drops so you don't have to. Every deal is verified and updated in real-time.</p>
+            
+            <form action="/" method="GET" class="search-container">
+                <input type="text" name="q" placeholder="Search for deals (e.g. iphone, shoes)..." value="{{ search_q or '' }}">
+                <button type="submit">FIND LOOT</button>
+            </form>
+
+            <div class="categories">
+                <a href="/" class="cat-btn {{ 'active' if not active_cat }}">All Deals</a>
+                <a href="/?cat=Mobiles" class="cat-btn {{ 'active' if active_cat == 'Mobiles' }}">Mobiles</a>
+                <a href="/?cat=Laptops" class="cat-btn {{ 'active' if active_cat == 'Laptops' }}">Laptops</a>
+                <a href="/?cat=Fashion" class="cat-btn {{ 'active' if active_cat == 'Fashion' }}">Fashion</a>
+                <a href="/?cat=Appliances" class="cat-btn {{ 'active' if active_cat == 'Appliances' }}">Appliances</a>
+            </div>
+        </section>
+
+        <section class="deals-grid">
+            {% if not deals %}
+            <div style="grid-column: 1/-1; text-align: center; padding: 4rem;">
+                <h2>No more loot found here! 🏴‍☠️</h2>
+                <p>Try searching for something else or go back to page 1.</p>
+                <a href="/" class="cat-btn" style="display:inline-block; margin-top:1rem;">Back to Home</a>
+            </div>
+            {% endif %}
+
+            {% for deal in deals %}
+            <div class="deal-card">
+                {% if deal.banner_path and deal.banner_path != 'None' %}
+                    <img src="{{ deal.banner_path }}" alt="{{ deal.title }}" class="deal-image">
+                {% else %}
+                    <div class="image-fallback">🛍️</div>
+                {% endif %}
+                
+                <div class="deal-content">
+                    <div class="deal-title">{{ deal.title }}</div>
+                    <div class="deal-price">{{ deal.price }}</div>
+                    
+                    <div class="meta">
+                        <span>🏷️ {{ deal.source or 'Verified' }}</span>
+                        <span>🕒 {{ deal.created_at[:10] }}</span>
+                    </div>
+
+                    <a href="{{ deal.affiliate_link }}" target="_blank" class="buy-btn">BUY FROM RETAILER</a>
+                </div>
+            </div>
+            {% endfor %}
+        </section>
+
+        <!-- Pagination Controls -->
+        <nav class="pagination" style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin: 3rem 0; padding: 2rem; border-top: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap;">
+            {% if has_prev %}
+            <a href="/?page={{ page - 1 }}{{ '&cat=' + active_cat if active_cat }}{{ '&q=' + search_q if search_q }}" class="page-btn">← Previous</a>
+            {% endif %}
+            
+            <div class="page-numbers" style="display: flex; gap: 0.5rem; align-items: center;">
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                        <a href="/?page={{ p }}{{ '&cat=' + active_cat if active_cat }}{{ '&q=' + search_q if search_q }}" 
+                           class="page-btn {{ 'active' if p == page }}"
+                           style="{{ 'background: var(--accent); color: #000; font-weight: 900;' if p == page else '' }}">
+                           {{ p }}
+                        </a>
+                    {% elif p == page - 3 or p == page + 3 %}
+                        <span style="color: rgba(255,255,255,0.3);">...</span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            {% if has_next %}
+            <a href="/?page={{ page + 1 }}{{ '&cat=' + active_cat if active_cat }}{{ '&q=' + search_q if search_q }}" class="page-btn">Next →</a>
+            {% endif %}
+        </nav>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="social-links">
+                <a href="https://t.me/your_channel">Telegram Channel</a>
+                <a href="#">YouTube</a>
+                <a href="#">Instagram</a>
+            </div>
+            <p>&copy; 2026 Cyber Tech Telugu. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
