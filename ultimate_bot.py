@@ -401,7 +401,7 @@ async def spider_hunt_loop():
                     for deal in deals:
                         real = await resolve_destination(deal['url'])
                         uid = extract_unique_id(real)
-                        if db.is_duplicate(uid): continue
+                        if db.is_duplicate_by_id(uid): continue
                         
                         aff = await get_affiliate_link(deal['url'], client)
                         if not aff: continue
