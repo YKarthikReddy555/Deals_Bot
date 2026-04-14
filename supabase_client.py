@@ -21,7 +21,7 @@ class DBManager:
         res = self.client.table("bot_settings").select("*").execute()
         return {item['key']: item['value'] for item in res.data}
 
-    def is_duplicate_by_id(self, unique_id, window_mins=5):
+    def is_duplicate_by_id(self, unique_id, window_mins=30):
         if not self.client or not unique_id: return False
         time_threshold = (datetime.utcnow() - timedelta(minutes=window_mins)).isoformat()
         res = self.client.table("deals").select("id")\
@@ -30,7 +30,7 @@ class DBManager:
             .limit(1).execute()
         return len(res.data) > 0
 
-    def is_duplicate_by_fingerprint(self, fingerprint, window_mins=5):
+    def is_duplicate_by_fingerprint(self, fingerprint, window_mins=30):
         if not self.client or not fingerprint: return False
         time_threshold = (datetime.utcnow() - timedelta(minutes=window_mins)).isoformat()
         res = self.client.table("deals").select("id")\
