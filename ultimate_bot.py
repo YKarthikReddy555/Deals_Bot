@@ -303,6 +303,13 @@ async def process_single_message(message, scraper, target_channels):
     await asyncio.sleep(random.uniform(0.5, 2.0))
     
     try:
+        # 🧪 DYNAMIC CONFIG: Fetch latest settings from DB to ensure target channels are fresh
+        settings = db.get_settings()
+        current_targets = get_target_channels(settings)
+        if not current_targets:
+            logger.warning("⚠️ No target channels configured in database. Skipping.")
+            return
+
         # 🧠 MULTI-PRODUCT PARSER
         labeled_links = extract_links(message.text)
         if not labeled_links: return
@@ -354,7 +361,7 @@ async def process_single_message(message, scraper, target_channels):
         
         posts_map = {}
         target_success = False
-        for target in target_channels:
+        for target in current_targets:
             try:
                 if img: 
                     sent = await client.send_file(target, img, caption=caption, parse_mode='markdown')
