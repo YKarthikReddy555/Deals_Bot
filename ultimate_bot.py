@@ -391,33 +391,25 @@ async def process_single_message(message, scraper, target_channels):
             logger.info(f"🚫 Duplicate filtered (posted within last 5 mins): {title}")
             return
 
-        # 📤 BROADCAST
-        caption = new_text
-        primary_orig_url = labeled_links[0]['url']
-        primary_aff_url = aff_list[0] if aff_list else primary_orig_url
-        
-        # 🖼️ SMART IMAGE DETECTION
-        img = None
-        img_path = f"static/uploads/{uid}.jpg"
-        if message.photo:
-            img = await scraper.download_media(message.photo, file=img_path)
-        elif message.media:
-            web = getattr(message.media, 'webpage', None)
-            if web and getattr(web, 'photo', None):
-                img = await scraper.download_media(web.photo, file=img_path)
-            elif getattr(message.media, 'document', None) and 'image' in (message.media.document.mime_type or ''):
-                img = await scraper.download_media(message.media.document, file=img_path)
-        
         if not img:
-            img = image_engine.generate_banner(title, current_price)
+            # 🖼️ ADVANCED MEDIA HUNT: Try downloading photo, document, or webpage preview
+            if message.photo:
+                img = await scraper.download_media(message.photo, file=img_path)
+            elif message.document and 'image' in (message.document.mime_type or ''):
+                img = await scraper.download_media(message.document, file=img_path)
+            elif message.media:
+                web = getattr(message.media, 'webpage', None)
+                if web and getattr(web, 'photo', None):
+                    img = await scraper.download_media(web.photo, file=img_path)
         
+        # 🧪 FALLBACK: If NO image found, we send a link preview message (NO black banners)
+        web_img_path = None
         if img: 
             img = image_engine.apply_watermark(img)
             web_img_path = "/" + img.replace("\\", "/")
-        else:
-            web_img_path = None
         
-        posts_map = {}
+        # 📝 CAPTION: Use 100% original source text with links replaced
+        caption = new_text
         target_success = False
         for target in current_targets:
             try:
