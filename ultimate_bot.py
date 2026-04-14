@@ -401,6 +401,8 @@ async def process_single_message(message, scraper, target_channels):
             logger.info(f"🚫 Duplicate filtered (posted within last 5 mins): {title}")
             return
 
+        img = None
+        img_path = f"static/uploads/{uid}.jpg"
         if not img:
             # 🖼️ ADVANCED MEDIA HUNT: Try downloading photo, document, or webpage preview
             if message.photo:
