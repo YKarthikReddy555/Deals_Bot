@@ -271,7 +271,9 @@ async def convert_and_clone_text(text, scraper, uid=None):
     """
     # 🧩 SURGICAL URL DETECTION: Exclude trailing punctuation and markdown symbols
     urls = sorted(list(set(re.findall(r'(https?://[^\s\)\}\]\*\'\",]+)', text))), key=len, reverse=True)
-    if not urls: return text, []
+    if not urls: 
+        logger.info("ℹ️ No URLs found in deal text. Skipping silent post.")
+        return None, []
 
     # Resolve and convert all in parallel
     tasks = [get_affiliate_link(url.strip(' )]*.,\"\''), scraper) for url in urls]
@@ -446,7 +448,12 @@ async def process_single_message(message, scraper, target_channels):
 
 def is_good_deal(text):
     text = text.lower()
-    loot_keywords = ["₹", "rs", "off", "deal", "loot", "%", "mrp", "price", "only", "@"]
+    # 🚫 EXCLUDE: Common error phrases to avoid cloning bot failures
+    forbidden = ["not supported", "could not locate", "verify if", "bot for more", "join our channel"]
+    if any(f in text for f in forbidden): return False
+
+    # ✅ INCLUDE: Must have at least one of these to be a deal
+    loot_keywords = ["₹", "rs", "off", "deal", "loot", "%", "mrp", "price", "only", "link", "buy", "grab"]
     return any(kw in text for kw in loot_keywords)
 
 async def monitor_stock_loop():
