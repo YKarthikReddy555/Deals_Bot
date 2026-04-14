@@ -89,19 +89,26 @@ def extract_mrp_and_price(text):
     AI PRICE PARSER: Extracts both MRP and Deal Price.
     Returns: (mrp, deal_price)
     """
-    # Find all prices: ₹123, Rs. 123
-    prices = re.findall(r'(?:₹|RS\.?\s?|@|MRP:?\s?|PRICE:?\s?)(\d{1,3}(?:,\d{3})*(?:\.\d+)?)', text, re.IGNORECASE)
-    clean_prices = [float(p.replace(',', '')) for p in prices]
+    # 🧼 CLEANUP: Remove common distractive numbers
+    clean_text = re.sub(r'(?:123|100%|99%|75%|50%|25%|percent|off)', '', text, flags=re.IGNORECASE)
     
-    if not clean_prices: return None, None
+    # 🔍 PATTERN 1: Explicit labels (MRP: 1000, Offer Price: 500)
+    mrp_match = re.search(r'(?:MRP|Strike|List Price):?\s*₹?\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?)', clean_text, re.IGNORECASE)
+    deal_match = re.search(r'(?:Deal|Offer|Now|Final|Price|Buy):?\s*₹?\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?)', clean_text, re.IGNORECASE)
     
-    # Logic: Usually the HIGHER price is MRP, LOWER is Deal
-    if len(clean_prices) >= 2:
-        mrp = max(clean_prices)
-        deal_price = min(clean_prices)
-        return mrp, deal_price
+    if mrp_match and deal_match:
+        return float(mrp_match.group(1).replace(',', '')), float(deal_match.group(1).replace(',', ''))
+
+    # 🔍 PATTERN 2: Sequence of prices (Higher is usually MRP, Lower is Deal)
+    prices = re.findall(r'(?:₹|Rs\.?\s?)(\d{1,3}(?:,\d{3})*(?:\.\d+)?)', clean_text, re.IGNORECASE)
+    clean_p = [float(p.replace(',', '')) for p in prices]
     
-    return None, clean_prices[0]
+    if len(clean_p) >= 2:
+        return max(clean_p), min(clean_p)
+    if len(clean_p) == 1:
+        return None, clean_p[0]
+    
+    return None, None
 
 def extract_price(text):
     """Fallback price detection"""
@@ -346,12 +353,21 @@ async def process_single_message(message, scraper, target_channels):
             web_img_path = None
         
         posts_map = {}
+        target_success = False
         for target in target_channels:
             try:
-                if img: sent = await client.send_file(target, img, caption=caption, parse_mode='markdown')
-                else: sent = await client.send_message(target, caption, parse_mode='markdown', hide_link_preview=True)
+                if img: 
+                    sent = await client.send_file(target, img, caption=caption, parse_mode='markdown')
+                else: 
+                    sent = await client.send_message(target, caption, parse_mode='markdown', hide_link_preview=True)
                 posts_map[str(target)] = sent.id
-            except: pass
+                target_success = True
+            except Exception as e:
+                logger.error(f"❌ Failed to post to target {target}: {e}")
+        
+        if not target_success:
+            logger.warning(f"⚠️ Deal not posted to any target channels: {title}")
+            return # Don't save to DB if it wasn't actually posted
         
         cat_id = detect_category(title)
         db.add_deal(title, current_price, primary_orig_url, primary_aff_url, web_img_path, uid, target_posts=posts_map, category=cat_id, fingerprint=fingerprint, mrp=mrp, discount_pct=discount_pct)
