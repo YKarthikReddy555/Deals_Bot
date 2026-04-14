@@ -341,6 +341,9 @@ async def search_source_for_niche(sources, keywords):
             for kw in keywords[:2]:
                 async for message in client.iter_messages(channel, search=kw, limit=10):
                     if not message.text: continue
+                    # 🛡️ SPIDER PROTECTION: Ignore error messages or bad formatting
+                    if not is_good_deal(message.text): continue
+                    
                     links = extract_links(message.text)
                     if not links: continue
                     niche_deals.append({
@@ -380,7 +383,12 @@ async def process_single_message(message, scraper, target_channels):
         
         # 🛡️ CLONE & CONVERT MODE (WITH AI)
         new_text, aff_list = await convert_and_clone_text(message.text, scraper, uid=uid)
-        if not new_text: return # Safety abort
+        
+        # 🧪 FAILURE CACHE: If conversion fails, save as 'failed' in DB to prevent infinite retries
+        if not new_text: 
+            logger.warning(f"🚫 Conversion failed for {uid}. Caching as failure to prevent fighting.")
+            db.add_deal(f"FAILED_{uid}", "0", real_primary, "NONE", unique_id=uid, fingerprint=f"FAIL_{uid}")
+            return # Safety abort
         
         # Determine primary metadata
         title = message.text.split('\n')[0][:60].strip(' *_-')
@@ -449,8 +457,11 @@ async def process_single_message(message, scraper, target_channels):
 def is_good_deal(text):
     text = text.lower()
     # 🚫 EXCLUDE: Common error phrases to avoid cloning bot failures
-    forbidden = ["not supported", "could not locate", "verify if", "bot for more", "join our channel"]
+    forbidden = ["not supported", "could not locate", "verify if", "bot for more", "join our channel", "affiliate url"]
     if any(f in text for f in forbidden): return False
+    
+    # 🚫 EXCLUDE: Very short messages that look like errors
+    if len(text) < 15: return False
 
     # ✅ INCLUDE: Must have at least one of these to be a deal
     loot_keywords = ["₹", "rs", "off", "deal", "loot", "%", "mrp", "price", "only", "link", "buy", "grab"]
