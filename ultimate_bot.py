@@ -45,17 +45,19 @@ image_engine = ImageEngine()
 # 🛡️ SAFE MODE CONFIG: Mandatory gap between posts to avoid bans
 LAST_POST_TIME = 0
 POST_COOLDOWN = 120 # 2 minutes (120 seconds)
+SAFE_LOCK = asyncio.Lock() # 🔒 EXCLUSIVE LOCK: Prevents race conditions
 
 async def wait_for_safe_cooldown():
-    """Ensures at least 2 minutes gap between every single post"""
+    """Ensures at least 2 minutes gap between every single post (Strictly enforced)"""
     global LAST_POST_TIME
-    loop_time = asyncio.get_event_loop().time()
-    elapsed = loop_time - LAST_POST_TIME
-    if LAST_POST_TIME > 0 and elapsed < POST_COOLDOWN:
-        wait = POST_COOLDOWN - elapsed
-        logger.info(f"⏳ Safe Mode: Waiting {int(wait)}s to ensure 2-min gap...")
-        await asyncio.sleep(wait)
-    LAST_POST_TIME = asyncio.get_event_loop().time()
+    async with SAFE_LOCK:
+        loop_time = asyncio.get_event_loop().time()
+        elapsed = loop_time - LAST_POST_TIME
+        if LAST_POST_TIME > 0 and elapsed < POST_COOLDOWN:
+            wait = POST_COOLDOWN - elapsed
+            logger.info(f"⏳ Safe Mode: Waiting {int(wait)}s to ensure 2-min gap...")
+            await asyncio.sleep(wait)
+        LAST_POST_TIME = asyncio.get_event_loop().time()
 
 # Force UTF-8 for Windows Console
 class SafeFormatter(logging.Formatter):
