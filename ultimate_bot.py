@@ -9,6 +9,7 @@ import json
 from datetime import datetime, timedelta
 from urllib.parse import quote
 from telethon import TelegramClient, events, types
+from telethon.sessions import StringSession
 from dotenv import load_dotenv
 
 # Local Imports
@@ -29,7 +30,13 @@ CHANNEL_ID = os.getenv("CHANNEL_ID", "@your_channel")
 SESSION_DIR = os.getenv("SESSION_DIR", ".")
 if not os.path.exists(SESSION_DIR): os.makedirs(SESSION_DIR)
 
-client = TelegramClient(os.path.join(SESSION_DIR, 'bot_session'), API_ID, API_HASH)
+# Use StringSession if available (Best for Railway/Heroku)
+BOT_SESSION_STR = os.getenv("BOT_SESSION_STRING")
+if BOT_SESSION_STR:
+    client = TelegramClient(StringSession(BOT_SESSION_STR), API_ID, API_HASH)
+else:
+    client = TelegramClient(os.path.join(SESSION_DIR, 'bot_session'), API_ID, API_HASH)
+
 image_engine = ImageEngine()
 
 # Force UTF-8 for Windows Console
@@ -469,7 +476,10 @@ async def manual_post_service():
 
 async def main():
     # 🚀 Initialize both clients
-    async with TelegramClient(os.path.join(SESSION_DIR, 'scraper_session'), API_ID, API_HASH) as scraper, \
+    SCRAPER_SESSION_STR = os.getenv("SCRAPER_SESSION_STRING")
+    scraper_session = StringSession(SCRAPER_SESSION_STR) if SCRAPER_SESSION_STR else os.path.join(SESSION_DIR, 'scraper_session')
+    
+    async with TelegramClient(scraper_session, API_ID, API_HASH) as scraper, \
                client:
         
         await client.start(bot_token=BOT_TOKEN)
