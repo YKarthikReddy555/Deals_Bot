@@ -363,14 +363,25 @@ async def process_single_message(message, scraper, target_channels):
         target_success = False
         for target in current_targets:
             try:
+                # 🖼️ PRIMARY ATTEMPT: Send with Photo
                 if img: 
-                    sent = await client.send_file(target, img, caption=caption, parse_mode='markdown')
+                    try:
+                        sent = await client.send_file(target, img, caption=caption, parse_mode='markdown')
+                        target_success = True
+                        posts_map[str(target)] = sent.id
+                    except Exception as e:
+                        # 🔄 FALLBACK: If Photo fails (Permissions/Restrictions), try Text Only
+                        logger.warning(f"⚠️ Photo restricted for {target}, trying Text Only: {e}")
+                        sent = await client.send_message(target, caption, parse_mode='markdown', hide_link_preview=False)
+                        target_success = True
+                        posts_map[str(target)] = sent.id
                 else: 
+                    # 📝 TEXT ATTEMPT: Send Text Only
                     sent = await client.send_message(target, caption, parse_mode='markdown', hide_link_preview=True)
-                posts_map[str(target)] = sent.id
-                target_success = True
+                    target_success = True
+                    posts_map[str(target)] = sent.id
             except Exception as e:
-                logger.error(f"❌ Failed to post to target {target}: {e}")
+                logger.error(f"❌ Critical Failure posting to {target}: {e}")
         
         if not target_success:
             logger.warning(f"⚠️ Deal not posted to any target channels: {title}")
