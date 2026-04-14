@@ -50,14 +50,19 @@ BURST_START_TIME = 0
 SAFE_LOCK = asyncio.Lock()
 
 def is_night_time():
-    """Checks if we are in the 'Safe Sleep' window (11:30 PM - 7:00 AM IST)"""
+    """Checks if we are in the 'Safe Sleep' window (1:30 AM - 7:00 AM IST)"""
     from datetime import datetime
     now_utc = datetime.utcnow()
-    # Quick IST conversion (UTC+5:30)
+    # IST conversion (UTC+5:30)
     ist_hour = (now_utc.hour + 5) + (1 if now_utc.minute + 30 >= 60 else 0)
     ist_hour %= 24
-    # Sleep between 11 PM (23) and 7 AM (7)
-    return ist_hour >= 23 or ist_hour < 7
+    ist_min = (now_utc.minute + 30) % 60
+    
+    total_min = ist_hour * 60 + ist_min
+    start_min = 1 * 60 + 30 # 01:30 AM
+    end_min = 7 * 60       # 07:00 AM
+    
+    return start_min <= total_min < end_min
 
 async def wait_for_safe_cooldown():
     """Ensures a burst of 3 deals followed by a mandatory 90s gap"""
