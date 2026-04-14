@@ -316,7 +316,7 @@ async def process_single_message(message, scraper, target_channels):
         discount_pct = int((1 - (deal_p / mrp)) * 100) if mrp and deal_p else None
 
         if db.is_duplicate_by_id(uid) or db.is_duplicate_by_fingerprint(fingerprint):
-            logger.info(f"🚫 Duplicate filtered: {title}")
+            logger.info(f"🚫 Duplicate filtered (posted within last 5 mins): {title}")
             return
 
         # 📤 BROADCAST

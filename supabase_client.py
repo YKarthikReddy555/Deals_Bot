@@ -21,7 +21,7 @@ class DBManager:
         res = self.client.table("bot_settings").select("*").execute()
         return {item['key']: item['value'] for item in res.data}
 
-    def is_duplicate_by_id(self, unique_id, window_mins=2):
+    def is_duplicate_by_id(self, unique_id, window_mins=5):
         if not self.client or not unique_id: return False
         time_threshold = (datetime.utcnow() - timedelta(minutes=window_mins)).isoformat()
         res = self.client.table("deals").select("id")\
@@ -30,7 +30,7 @@ class DBManager:
             .limit(1).execute()
         return len(res.data) > 0
 
-    def is_duplicate_by_fingerprint(self, fingerprint, window_mins=2):
+    def is_duplicate_by_fingerprint(self, fingerprint, window_mins=5):
         if not self.client or not fingerprint: return False
         time_threshold = (datetime.utcnow() - timedelta(minutes=window_mins)).isoformat()
         res = self.client.table("deals").select("id")\
@@ -60,12 +60,10 @@ class DBManager:
         try:
             self.client.table("deals").insert(data).execute()
         except Exception as e:
-            # 🛡️ SAFETY FALLBACK: If Supabase cache is stale
-            print(f"❌ DB Error: {e}. Trying basic insert...")
-            basic_data = {k: v for k, v in data.items() if k not in ["chat_id", "target_posts", "category", "fingerprint", "mrp", "discount_pct"]}
-            try:
-                self.client.table("deals").insert(basic_data).execute()
-            except: pass
+            # 🛡️ ELITE STABILITY: Silently catch and log to prevent bot crash
+            print(f"⚠️ DB Insert skipped (likely race condition duplicate): {e}")
+            # We don't try twice here to keep the code clean and fast. 
+            # The logic in ultimate_bot.py handles the primary duplicate check.
 
     def get_historical_low(self, unique_id, days=30):
         if not self.client or not unique_id: return None
