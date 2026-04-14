@@ -30,6 +30,9 @@ CHANNEL_ID = os.getenv("CHANNEL_ID", "@your_channel")
 SESSION_DIR = os.getenv("SESSION_DIR", ".")
 if not os.path.exists(SESSION_DIR): os.makedirs(SESSION_DIR)
 
+# Traffic control for EarnKaro (only one conversation at a time)
+ek_lock = asyncio.Lock()
+
 # Use StringSession if available (Best for Railway/Heroku)
 BOT_SESSION_STR = os.getenv("BOT_SESSION_STRING")
 if BOT_SESSION_STR:
@@ -126,20 +129,23 @@ def extract_unique_id(url):
 async def convert_to_earnkaro(url, scraper):
     bot_handle = os.getenv("EARNKARO_BOT", "@ekconverter9bot")
     ek_id = os.getenv("EARNKARO_ID", "5079830")
-    try:
-        async with scraper.conversation(bot_handle, timeout=30) as conv:
-            await conv.send_message(url)
-            response = await conv.get_response()
-            if "not locate" in response.text.lower():
-                logger.warning(f"❌ EarnKaro: Retailer Not Supported ({url})")
-                return None
-            new_urls = re.findall(r'(https?://\S+)', response.text)
-            if new_urls: return new_urls[0]
-            logger.warning(f"⚠️ EarnKaro: No link in response for {url}")
-    except asyncio.TimeoutError:
-        logger.warning(f"⏰ EarnKaro: Timeout (Bot too slow) for {url}")
-    except Exception as e:
-        logger.warning(f"⚠️ EarnKaro Error: {str(e) or type(e).__name__} for {url}")
+    
+    # 🔒 Lock ensures we don't open multiple parallel conversations (prevents EOF/Exclusive errors)
+    async with ek_lock:
+        try:
+            async with scraper.conversation(bot_handle, timeout=30) as conv:
+                await conv.send_message(url)
+                response = await conv.get_response()
+                if "not locate" in response.text.lower():
+                    logger.warning(f"❌ EarnKaro: Retailer Not Supported ({url})")
+                    return None
+                new_urls = re.findall(r'(https?://\S+)', response.text)
+                if new_urls: return new_urls[0]
+                logger.warning(f"⚠️ EarnKaro: No link in response for {url}")
+        except asyncio.TimeoutError:
+            logger.warning(f"⏰ EarnKaro: Timeout (Bot too slow) for {url}")
+        except Exception as e:
+            logger.warning(f"⚠️ EarnKaro Error: {str(e) or type(e).__name__} for {url}")
     return None
 
 async def get_affiliate_link(url, scraper):
