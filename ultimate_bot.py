@@ -198,7 +198,8 @@ async def convert_to_earnkaro(url, scraper):
     # 🔒 Lock ensures we don't open multiple parallel conversations (prevents EOF/Exclusive errors)
     async with ek_lock:
         try:
-            async with scraper.conversation(bot_handle, timeout=30) as conv:
+            # 🚀 MEGA TIMEOUT: 60s to handle batches of 10+ links safely
+            async with scraper.conversation(bot_handle, timeout=60) as conv:
                 await conv.send_message(url)
                 response = await conv.get_response()
                 if "not locate" in response.text.lower():
@@ -281,10 +282,14 @@ async def convert_and_clone_text(text, scraper, uid=None):
     
     mapping = {orig: aff for orig, aff in zip(urls, aff_links) if aff}
     
-    # Check for All-or-Nothing safety
+    # 🛡️ PARTIAL SUCCESS MODE: Proceed as long as at least one link is converted.
+    # We no longer fail the whole message if 1 out of 10 links fail.
+    if not mapping and urls:
+        logger.warning(f"❌ Conversion failed for all {len(urls)} links. Skipping deal.")
+        return None, []
+    
     if len(mapping) < len(urls):
-        logger.warning(f"⚠️ Conversion incomplete: {len(mapping)}/{len(urls)} converted.")
-        return None, [] # Abort if any conversion fails for quality
+        logger.warning(f"⚠️ Partial success: {len(mapping)}/{len(urls)} converted. Posting anyway.")
 
     # AI ANALYSIS: MRP & DISCOUNTS
     mrp, deal_p = extract_mrp_and_price(text)
